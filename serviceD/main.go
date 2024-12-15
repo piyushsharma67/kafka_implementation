@@ -2,17 +2,27 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"sync"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/gorilla/websocket"
 )
 
 func main() {
+	//creating a connection to service c using websocket
+	conn, _, err := websocket.DefaultDialer.Dial("ws://service_c:3000/ws", nil)
+	if err != nil {
+		log.Fatal("Error connecting to server:", err)
+	}
+	fmt.Println("Connected to the server c")
+	defer conn.Close()
 
+	//creating consomer config to consume message from Kafka
 	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
 		"bootstrap.servers": "kafka:9093",
-		"group.id":          "serviceB",
+		"group.id":          "serviceD",
 		"auto.offset.reset": "smallest",
 		"debug":             "generic,broker,consumer",
 	})
@@ -22,7 +32,7 @@ func main() {
 	}
 
 	messageChannel := make(chan *kafka.Message)
-	err = consumer.SubscribeTopics([]string{"serviceA"}, nil)
+	err = consumer.SubscribeTopics([]string{"message"}, nil)
 	var wg sync.WaitGroup
 	wg.Add(1)
 
@@ -49,6 +59,10 @@ func main() {
 	for msg := range messageChannel {
 		// Process the received message
 		fmt.Printf("Received message: %s\n", string(msg.Value))
+		err = conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("Hello, Serverc! i have got message %s", msg.Value)))
+		if err != nil {
+			log.Fatal("Error sending message:", err)
+		}
 	}
 
 	close(messageChannel)

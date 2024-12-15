@@ -22,6 +22,7 @@ services:
       retries: 5  # Retry 5 times before considering Kafka as unhealthy
       timeout: 10s  # Timeout for each check is 10 seconds
       start_period: 10s  # Kafka will have 10 seconds to start before health checks begin
+
   service_a:
     build:
       context: ./serviceA
@@ -39,5 +40,33 @@ services:
     depends_on:
       kafka:
         condition: service_healthy  # Wait for Kafka to be available
+
+  service_c:
+    build:
+      context: ./serviceC
+      dockerfile: Dockerfile
+    container_name: service_c
+    depends_on:
+      kafka:
+        condition: service_healthy  # Wait for Kafka to be available
+    ports:
+      - "3000:3000"  # Map port 3333 of the container to port 3333 on the host
+    networks:
+      - my_network
+
+  service_d:
+    build:
+      context: ./serviceD
+      dockerfile: Dockerfile
+    container_name: service_d
+    depends_on:
+      kafka:
+        condition: service_healthy  # Wait for Kafka to be available
+    networks:
+      - my_network
+networks:
+  my_network:
+    driver: bridge
+
 
 
